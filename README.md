@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# yougostudy
 
-## Getting Started
+A little space to focus together — a multiplayer 2D virtual study & co-working room.
 
-First, run the development server:
+## Status
+
+**Phase 1 — Project foundation** ✅
+
+- Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS v4
+- App shell with sidebar navigation
+- Lobby (online users, room list, local-only chat), Public / Private / My Rooms, Profile
+- Placeholder study room page at `/rooms/[roomId]`
+- All data is mock data from `src/lib/mock-data.ts` until Supabase is connected (Phase 3)
+
+See [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md) for the roadmap.
+
+## Run locally
+
+Requires Node.js 20+.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 (it redirects to `/lobby`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint    # ESLint
+npm run build   # production build
+npm start       # serve the production build
+```
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```text
+public/assets/        # backgrounds, characters/<animal>, furniture, objects, ui (placeholders for now)
+src/app/              # routes: lobby, rooms/{public,private,mine,[roomId]}, profile
+src/components/       # React UI: layout, chat, rooms, profile
+src/game/             # Phaser game code (Phase 2+): scenes, characters, movement, furniture, camera, multiplayer
+src/lib/              # supabase client (Phase 3), utils, mock data
+src/types/            # shared TypeScript types
+docs/                 # product spec
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+React owns navigation, lists, chat and settings; Phaser will own the game world.
+The two are kept separate.
