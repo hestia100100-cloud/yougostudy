@@ -40,7 +40,7 @@ Next.js + React + TypeScript + Tailwind · Phaser · Supabase (auth, Postgres, R
 
 ## Roadmap
 1. **Foundation** — Next.js/TS/Tailwind, structure, Lobby, room pages. ✅
-2. **Single-player room** — Phaser, background, one avatar, drag movement, 4-dir animations, camera, bounds, furniture, sitting.
+2. **Single-player room** — Phaser, background, one avatar, drag movement, 4-dir animations, camera, bounds, furniture, sitting. ✅
 3. **Multiplayer** — Supabase auth, membership, presence, position/state sync, disconnects.
 4. **Communication** — lobby/room chat, private room password verification, invitations, member lists.
 5. **Productivity** — timer, to-do, focus status, profile.

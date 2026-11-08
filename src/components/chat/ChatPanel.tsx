@@ -7,7 +7,15 @@ import type { ChatMessage } from "@/types";
 
 // Local-only chat UI. Messages are not sent anywhere until Supabase Realtime
 // is connected (Phase 4); the component API is designed to stay the same.
-export function ChatPanel({ title, initialMessages = [] }: { title: string; initialMessages?: ChatMessage[] }) {
+export function ChatPanel({
+  title,
+  initialMessages = [],
+  className = "h-96",
+}: {
+  title: string;
+  initialMessages?: ChatMessage[];
+  className?: string;
+}) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
 
@@ -30,7 +38,7 @@ export function ChatPanel({ title, initialMessages = [] }: { title: string; init
   }
 
   return (
-    <section className="flex h-96 flex-col rounded-lg border-2 border-bark bg-white/60">
+    <section className={`flex flex-col rounded-lg border-2 border-bark bg-white/60 ${className}`}>
       <h2 className="border-b-2 border-bark/15 px-4 py-2 text-sm font-semibold text-forest">{title}</h2>
       <ol className="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm">
         {messages.map((m) =>
