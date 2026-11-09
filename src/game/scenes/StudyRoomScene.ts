@@ -8,16 +8,18 @@ import { generateFurniturePlaceholders } from "@/game/assets/placeholders/furnit
 import { setupFollowCamera } from "@/game/camera/followCamera";
 import { Avatar } from "@/game/characters/Avatar";
 import { registerCharacterAnimations } from "@/game/characters/animations";
-import { INTERACT_RADIUS, SPAWN_POINT } from "@/game/config/world";
+import { INTERACT_RADIUS } from "@/game/config/world";
 import { gameEvents } from "@/game/events";
 import { FurnitureObject, blockerRect } from "@/game/furniture/Furniture";
 import { FURNITURE, SEATS, type SeatDef } from "@/game/furniture/layout";
 import { DragController } from "@/game/movement/DragController";
+import { RemotePlayers } from "@/game/multiplayer/RemotePlayers";
 import type { Rect } from "@/game/movement/movement";
 
 export interface StudyRoomSceneData {
   animal: AnimalType;
   username: string;
+  spawn: { x: number; y: number };
 }
 
 /** Clicks shorter than this (px of pointer travel) count as clicks, not drags. */
@@ -27,8 +29,7 @@ export class StudyRoomScene extends Phaser.Scene {
   private player!: Avatar;
   private drag!: DragController;
   private hoverHint!: Phaser.GameObjects.Text;
-  /** Seats taken by anyone in the room. Shared state once multiplayer lands. */
-  private occupiedSeats = new Set<string>();
+  private remotes!: RemotePlayers;
   /** Furniture the current activity/seat belongs to, for the UI label. */
   private activityPlace: string | null = null;
   private unsubscribers: (() => void)[] = [];
@@ -57,10 +58,11 @@ export class StudyRoomScene extends Phaser.Scene {
       if (obj.interactive) this.wireFurniture(obj);
     }
 
-    this.player = new Avatar(this, SPAWN_POINT.x, SPAWN_POINT.y, data.animal, data.username);
+    this.player = new Avatar(this, data.spawn.x, data.spawn.y, data.animal, data.username);
+    this.remotes = new RemotePlayers(this);
     this.drag = new DragController(this, this.player, blockers, {
       onDragStart: () => this.leaveCurrentSpot(),
-      onMoved: () => {},
+      onMoved: () => gameEvents.emit("local:snapshot", { snapshot: this.player.snapshot(), reason: "move" }),
     });
     setupFollowCamera(this, this.player);
 
@@ -76,14 +78,28 @@ export class StudyRoomScene extends Phaser.Scene {
       .setDepth(10_000)
       .setVisible(false);
 
-    this.unsubscribers.push(gameEvents.on("command:stand-up", () => this.leaveCurrentSpot()));
-    this.events.once("shutdown", () => this.unsubscribers.forEach((u) => u()));
+    this.unsubscribers.push(
+      gameEvents.on("command:stand-up", () => this.leaveCurrentSpot()),
+      gameEvents.on("remote:upsert", (p) => this.remotes.upsert(p)),
+      gameEvents.on("remote:move", (m) => this.remotes.move(m)),
+      gameEvents.on("remote:leave", ({ userId }) => this.remotes.remove(userId)),
+    );
+    // Phaser destroys (not shuts down) the scene when the React page unmounts the game.
+    const cleanup = () => {
+      this.unsubscribers.forEach((u) => u());
+      this.unsubscribers = [];
+      this.remotes.destroy();
+    };
+    this.events.once("shutdown", cleanup);
+    this.events.once("destroy", cleanup);
     this.emitState();
+    gameEvents.emit("game:ready");
   }
 
   update(_time: number, delta: number) {
     const before = this.player.characterState;
     this.drag.update(delta);
+    this.remotes.update(delta);
     if (this.player.characterState !== before) this.emitState();
   }
 
@@ -105,9 +121,10 @@ export class StudyRoomScene extends Phaser.Scene {
     this.hoverHint.setVisible(false);
 
     if (def.seatIds?.length) {
+      const taken = this.remotes.occupiedSeats();
       const free = def.seatIds
         .map((id) => SEATS.get(id)!)
-        .filter((s) => !this.occupiedSeats.has(s.id) || s.id === this.player.seatId);
+        .filter((s) => !taken.has(s.id));
       if (free.length === 0) return this.floatHint(obj, "Taken");
       const seat = free.reduce((a, b) => (this.distanceTo(a) <= this.distanceTo(b) ? a : b));
       if (seat.id === this.player.seatId) return;
@@ -128,7 +145,6 @@ export class StudyRoomScene extends Phaser.Scene {
 
   private sitAt(seat: SeatDef, place: string) {
     this.leaveCurrentSpot();
-    this.occupiedSeats.add(seat.id);
     this.activityPlace = place;
     this.player.sit(seat.id, seat.x, seat.y, seat.state, seat.depth ?? seat.y);
     this.emitState();
@@ -145,7 +161,6 @@ export class StudyRoomScene extends Phaser.Scene {
   private leaveCurrentSpot() {
     if (this.player.seatId) {
       const seat = SEATS.get(this.player.seatId)!;
-      this.occupiedSeats.delete(seat.id);
       this.player.standUp(seat.exit.x, seat.exit.y);
     } else if (this.player.characterState !== "idle" && this.player.characterState !== "walking") {
       this.player.setCharacterState("idle");
@@ -180,5 +195,6 @@ export class StudyRoomScene extends Phaser.Scene {
       seated: this.player.seated,
       activity: label && this.activityPlace ? `${label} · ${this.activityPlace}` : null,
     });
+    gameEvents.emit("local:snapshot", { snapshot: this.player.snapshot(), reason: "state" });
   }
 }

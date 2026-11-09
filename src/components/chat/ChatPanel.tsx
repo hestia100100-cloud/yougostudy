@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { AnimalAvatar } from "@/components/profile/AnimalAvatar";
-import { currentUser } from "@/lib/mock-data";
 import type { ChatMessage } from "@/types";
 
 // Local-only chat UI. Messages are not sent anywhere until Supabase Realtime
@@ -16,6 +16,7 @@ export function ChatPanel({
   initialMessages?: ChatMessage[];
   className?: string;
 }) {
+  const { profile: currentUser } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState("");
 

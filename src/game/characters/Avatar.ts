@@ -11,6 +11,7 @@ import {
   type StandingActivityState,
 } from "@/game/assets/keys";
 import type { Direction } from "@/game/movement/movement";
+import type { LocalSnapshot } from "@/game/events";
 import { ACTIVITY_LABELS } from "@/game/furniture/layout";
 
 const STATE_ICON: Partial<Record<CharacterState, string>> = {
@@ -19,15 +20,6 @@ const STATE_ICON: Partial<Record<CharacterState, string>> = {
   break: "☕",
   sleeping: "💤",
 };
-
-/** Serializable avatar state — what will be broadcast to other players in Phase 3. */
-export interface AvatarSnapshot {
-  x: number;
-  y: number;
-  state: CharacterState;
-  facing: Direction;
-  seatId: string | null;
-}
 
 /**
  * Visual representation of one player. Holds no input logic, so the same class
@@ -76,6 +68,10 @@ export class Avatar extends Phaser.GameObjects.Container {
     return this.seatId !== null;
   }
 
+  setDisplayName(name: string) {
+    if (this.nameLabel.text !== name) this.nameLabel.setText(name);
+  }
+
   setFacing(dir: Direction) {
     if (dir === this.facing) return;
     this.facing = dir;
@@ -111,7 +107,8 @@ export class Avatar extends Phaser.GameObjects.Container {
     this.setDepth(this.seatDepth ?? this.y);
   }
 
-  snapshot(): AvatarSnapshot {
+  /** Shareable state for the network layer. */
+  snapshot(): LocalSnapshot {
     return { x: this.x, y: this.y, state: this.characterState, facing: this.facing, seatId: this.seatId };
   }
 

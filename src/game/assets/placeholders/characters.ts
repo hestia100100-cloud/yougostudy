@@ -1,4 +1,4 @@
-// Procedurally drawn placeholder cat frames. Temporary art: replace by loading
+// Procedurally drawn placeholder animal frames. Temporary art: replace by loading
 // real frames under the same keys (see assets/manifest.ts).
 import type * as Phaser from "phaser";
 import type { AnimalType } from "@/types";
@@ -28,9 +28,29 @@ interface Pose {
   bob: number;
 }
 
-const FUR = C.terracotta;
-const FUR_DARK = 0x8f5034;
-const BELLY = C.paper;
+interface Species {
+  fur: number;
+  furDark: number;
+  belly: number;
+  feet: number;
+  ears: "pointy" | "long" | "round" | "none" | "spiky";
+  tail: "long" | "puff" | "none";
+  beak: boolean;
+  /** Forehead stripes. */
+  stripes: boolean;
+}
+
+// Shared body plan, distinct silhouettes via ears/tail/beak. Temporary until final art.
+const SPECIES: Record<AnimalType, Species> = {
+  cat: { fur: C.terracotta, furDark: 0x8f5034, belly: C.paper, feet: C.terracotta, ears: "pointy", tail: "long", beak: false, stripes: true },
+  rabbit: { fur: 0xe6dccb, furDark: 0xc9b9a0, belly: 0xf7f2ea, feet: 0xe6dccb, ears: "long", tail: "puff", beak: false, stripes: false },
+  penguin: { fur: 0x34404a, furDark: 0x232b32, belly: C.paper, feet: 0xd9893f, ears: "none", tail: "none", beak: true, stripes: false },
+  bear: { fur: 0x7a5a43, furDark: 0x5a4130, belly: C.beige, feet: 0x7a5a43, ears: "round", tail: "puff", beak: false, stripes: false },
+  hedgehog: { fur: 0xa88a6a, furDark: 0x5e4a38, belly: 0xe8d9bf, feet: 0xa88a6a, ears: "spiky", tail: "none", beak: false, stripes: false },
+};
+
+/** Species being drawn (set per animal in generateCharacterPlaceholders). */
+let S: Species = SPECIES.cat;
 const OUT = C.ink;
 const W = CHARACTER_FRAME.w;
 const H = CHARACTER_FRAME.h;
@@ -55,9 +75,15 @@ function tri(g: G, x1: number, y1: number, x2: number, y2: number, x3: number, y
 }
 
 function tail(g: G, points: [number, number][]) {
+  if (S.tail === "none") return;
+  if (S.tail === "puff") {
+    const [x, y] = points[0];
+    ellipse(g, x + Math.sign(x - CX) * 3, y, 11, 10, S.belly);
+    return;
+  }
   g.lineStyle(9, OUT, 1);
   g.strokePoints(points.map(([x, y]) => ({ x, y })), false);
-  g.lineStyle(5, FUR, 1);
+  g.lineStyle(5, S.fur, 1);
   g.strokePoints(points.map(([x, y]) => ({ x, y })), false);
 }
 
@@ -80,16 +106,76 @@ function eyes(g: G, pts: [number, number][], mode: Pose["eyes"]) {
   }
 }
 
+function spikes(g: G, hx: number, hy: number, from: number, to: number) {
+  for (let a = from; a <= to; a += 0.32) {
+    const bx = hx + Math.cos(a) * 14;
+    const by = hy + Math.sin(a) * 12;
+    tri(g, bx - Math.sin(a) * 5, by + Math.cos(a) * 5, bx + Math.cos(a) * 10, by + Math.sin(a) * 10, bx + Math.sin(a) * 5, by - Math.cos(a) * 5, S.furDark);
+  }
+}
+
+function earsFront(g: G, hx: number, hy: number) {
+  switch (S.ears) {
+    case "pointy":
+      tri(g, hx - 15, hy - 4, hx - 11, hy - 20, hx - 2, hy - 10, S.fur);
+      tri(g, hx + 15, hy - 4, hx + 11, hy - 20, hx + 2, hy - 10, S.fur);
+      break;
+    case "long":
+      ellipse(g, hx - 7, hy - 20, 9, 26, S.fur);
+      ellipse(g, hx + 7, hy - 20, 9, 26, S.fur);
+      g.fillStyle(0xe2a99a, 1);
+      g.fillEllipse(hx - 7, hy - 20, 4, 17);
+      g.fillEllipse(hx + 7, hy - 20, 4, 17);
+      break;
+    case "round":
+      ellipse(g, hx - 12, hy - 11, 12, 12, S.fur);
+      ellipse(g, hx + 12, hy - 11, 12, 12, S.fur);
+      break;
+    case "spiky":
+      spikes(g, hx, hy, Math.PI * 0.95, Math.PI * 2.05);
+      break;
+    case "none":
+      break;
+  }
+}
+
+function earSide(g: G, hx: number, hy: number, s: number) {
+  switch (S.ears) {
+    case "pointy":
+      tri(g, hx - 10 * s, hy - 6, hx - 6 * s, hy - 21, hx + 3 * s, hy - 11, S.fur);
+      break;
+    case "long":
+      ellipse(g, hx - 4 * s, hy - 20, 9, 26, S.fur);
+      break;
+    case "round":
+      ellipse(g, hx - 6 * s, hy - 12, 12, 12, S.fur);
+      break;
+    case "spiky":
+      spikes(g, hx - 3 * s, hy, s > 0 ? Math.PI * 0.6 : Math.PI * 1.3, s > 0 ? Math.PI * 1.7 : Math.PI * 2.4);
+      break;
+    case "none":
+      break;
+  }
+}
+
 function headFront(g: G, hx: number, hy: number, pose: Pose) {
-  tri(g, hx - 15, hy - 4, hx - 11, hy - 20, hx - 2, hy - 10, FUR);
-  tri(g, hx + 15, hy - 4, hx + 11, hy - 20, hx + 2, hy - 10, FUR);
-  ellipse(g, hx, hy, 34, 28, FUR);
-  // forehead stripes give the cat its own markings
-  g.fillStyle(FUR_DARK, 1);
-  g.fillRect(hx - 4, hy - 13, 2.5, 6);
-  g.fillRect(hx + 1.5, hy - 13, 2.5, 6);
-  // muzzle
-  g.fillStyle(BELLY, 1);
+  earsFront(g, hx, hy);
+  ellipse(g, hx, hy, 34, 28, S.fur);
+  if (S.stripes) {
+    g.fillStyle(S.furDark, 1);
+    g.fillRect(hx - 4, hy - 13, 2.5, 6);
+    g.fillRect(hx + 1.5, hy - 13, 2.5, 6);
+  }
+  if (S.beak) {
+    // penguin face: white mask + beak
+    g.fillStyle(S.belly, 1);
+    g.fillEllipse(hx - 6, hy + 2, 12, 14);
+    g.fillEllipse(hx + 6, hy + 2, 12, 14);
+    eyes(g, [[hx - 6, hy], [hx + 6, hy]], pose.eyes);
+    tri(g, hx - 4, hy + 5, hx + 4, hy + 5, hx, hy + 11, S.feet);
+    return;
+  }
+  g.fillStyle(S.belly, 1);
   g.fillEllipse(hx, hy + 6, 14, 9);
   eyes(g, [[hx - 7, hy + 1], [hx + 7, hy + 1]], pose.eyes);
   g.fillStyle(OUT, 1);
@@ -97,24 +183,31 @@ function headFront(g: G, hx: number, hy: number, pose: Pose) {
 }
 
 function headBack(g: G, hx: number, hy: number) {
-  tri(g, hx - 15, hy - 4, hx - 11, hy - 20, hx - 2, hy - 10, FUR);
-  tri(g, hx + 15, hy - 4, hx + 11, hy - 20, hx + 2, hy - 10, FUR);
-  ellipse(g, hx, hy, 34, 28, FUR);
-  g.fillStyle(FUR_DARK, 1);
-  for (const dx of [-7, 0, 7]) g.fillRect(hx + dx - 1.5, hy - 12, 3, 10);
+  earsFront(g, hx, hy);
+  ellipse(g, hx, hy, 34, 28, S.fur);
+  if (S.stripes) {
+    g.fillStyle(S.furDark, 1);
+    for (const dx of [-7, 0, 7]) g.fillRect(hx + dx - 1.5, hy - 12, 3, 10);
+  }
 }
 
 function headSide(g: G, hx: number, hy: number, s: number, pose: Pose) {
   // s = +1 facing right, -1 facing left
-  tri(g, hx - 10 * s, hy - 6, hx - 6 * s, hy - 21, hx + 3 * s, hy - 11, FUR);
-  ellipse(g, hx, hy, 32, 27, FUR);
-  g.fillStyle(BELLY, 1);
+  earSide(g, hx, hy, s);
+  ellipse(g, hx, hy, 32, 27, S.fur);
+  g.fillStyle(S.belly, 1);
   g.fillEllipse(hx + 11 * s, hy + 5, 11, 9);
-  g.fillStyle(FUR_DARK, 1);
-  g.fillRect(hx - 6 * s - 1.5, hy - 12, 3, 7);
+  if (S.stripes) {
+    g.fillStyle(S.furDark, 1);
+    g.fillRect(hx - 6 * s - 1.5, hy - 12, 3, 7);
+  }
   eyes(g, [[hx + 7 * s, hy]], pose.eyes);
-  g.fillStyle(OUT, 1);
-  g.fillCircle(hx + 16 * s, hy + 3, 1.8);
+  if (S.beak) {
+    tri(g, hx + 14 * s, hy + 1, hx + 14 * s, hy + 7, hx + 22 * s, hy + 4, S.feet);
+  } else {
+    g.fillStyle(OUT, 1);
+    g.fillCircle(hx + 16 * s, hy + 3, 1.8);
+  }
 }
 
 function prop(g: G, p: Prop, x: number, y: number) {
@@ -174,11 +267,11 @@ function drawStanding(g: G, pose: Pose) {
   if (dir === "down" || dir === "up") {
     if (dir === "down") tail(g, [[CX + 10, foot - 14], [CX + 22, foot - 18], [CX + 24, foot - 32]]);
     // legs
-    ellipse(g, CX - 7, foot - 4 - lift(0), 10, 9, FUR);
-    ellipse(g, CX + 7, foot - 4 - lift(2), 10, 9, FUR);
-    ellipse(g, CX, foot - 18 + by, 30, 28, FUR);
+    ellipse(g, CX - 7, foot - 4 - lift(0), 10, 9, S.feet);
+    ellipse(g, CX + 7, foot - 4 - lift(2), 10, 9, S.feet);
+    ellipse(g, CX, foot - 18 + by, 30, 28, S.fur);
     if (dir === "down") {
-      g.fillStyle(BELLY, 1);
+      g.fillStyle(S.belly, 1);
       g.fillEllipse(CX, foot - 16 + by, 16, 18);
       headFront(g, CX, foot - 40 + by, pose);
       prop(g, pose.prop, CX, foot - 18 + by);
@@ -190,11 +283,11 @@ function drawStanding(g: G, pose: Pose) {
     const s = dir === "right" ? 1 : -1;
     tail(g, [[CX - 13 * s, foot - 16 + by], [CX - 24 * s, foot - 20], [CX - 26 * s, foot - 34]]);
     // far legs then near legs, alternating
-    ellipse(g, CX - 8 * s, foot - 4 - lift(1), 9, 9, FUR_DARK);
-    ellipse(g, CX + 9 * s, foot - 4 - lift(3), 9, 9, FUR_DARK);
-    ellipse(g, CX, foot - 16 + by, 36, 24, FUR);
-    ellipse(g, CX - 6 * s, foot - 4 - lift(3), 10, 9, FUR);
-    ellipse(g, CX + 11 * s, foot - 4 - lift(1), 10, 9, FUR);
+    ellipse(g, CX - 8 * s, foot - 4 - lift(1), 9, 9, S.furDark);
+    ellipse(g, CX + 9 * s, foot - 4 - lift(3), 9, 9, S.furDark);
+    ellipse(g, CX, foot - 16 + by, 36, 24, S.fur);
+    ellipse(g, CX - 6 * s, foot - 4 - lift(3), 10, 9, S.feet);
+    ellipse(g, CX + 11 * s, foot - 4 - lift(1), 10, 9, S.feet);
     headSide(g, CX + 7 * s, foot - 36 + by, s, pose);
   }
 }
@@ -203,12 +296,12 @@ function drawSeated(g: G, pose: Pose) {
   const base = H - 4;
   const by = pose.bob;
   tail(g, [[CX + 12, base - 6], [CX + 24, base - 8], [CX + 25, base - 20]]);
-  ellipse(g, CX, base - 14 + by, 34, 26, FUR);
-  g.fillStyle(BELLY, 1);
+  ellipse(g, CX, base - 14 + by, 34, 26, S.fur);
+  g.fillStyle(S.belly, 1);
   g.fillEllipse(CX, base - 13 + by, 18, 16);
   // paws resting forward
-  ellipse(g, CX - 8, base - 2, 11, 8, FUR);
-  ellipse(g, CX + 8, base - 2, 11, 8, FUR);
+  ellipse(g, CX - 8, base - 2, 11, 8, S.feet);
+  ellipse(g, CX + 8, base - 2, 11, 8, S.feet);
   headFront(g, CX, base - 36 + by, pose);
   prop(g, pose.prop, CX, base - 12 + by);
 }
@@ -232,6 +325,7 @@ const STATE_PROP: Record<string, Prop> = {
 };
 
 export function generateCharacterPlaceholders(scene: Phaser.Scene, animal: AnimalType) {
+  S = SPECIES[animal];
   const base: Pose = { dir: "down", seated: false, step: -1, eyes: "open", prop: "none", bob: 0 };
 
   drawFrame(scene, frameKey(animIdle(animal), 0), base);

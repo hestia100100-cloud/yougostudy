@@ -9,6 +9,8 @@ export type CharacterState =
   | "sleeping"
   | "break";
 
+export type Facing = "up" | "down" | "left" | "right";
+
 export type RoomVisibility = "public" | "private";
 
 export type RoomStatus = "open" | "quiet" | "closed";
@@ -25,7 +27,7 @@ export interface Room {
   name: string;
   description: string;
   visibility: RoomVisibility;
-  creatorId: string;
+  creatorId: string | null;
   creatorName: string;
   onlineCount: number;
   createdAt: string;
@@ -40,3 +42,18 @@ export interface ChatMessage {
   text: string;
   sentAt: string;
 }
+
+/** A player's avatar state as shared with everyone in the room (world coordinates). */
+export interface PlayerSnapshot {
+  userId: string;
+  username: string;
+  animal: AnimalType;
+  x: number;
+  y: number;
+  state: CharacterState;
+  facing: Facing;
+  seatId: string | null;
+}
+
+/** High-frequency movement update (subset of PlayerSnapshot). */
+export type PlayerMove = Pick<PlayerSnapshot, "userId" | "x" | "y" | "facing" | "state">;

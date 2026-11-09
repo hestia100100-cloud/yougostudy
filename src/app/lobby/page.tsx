@@ -1,12 +1,22 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { usePresence } from "@/components/presence/PresenceProvider";
 import { AnimalAvatar } from "@/components/profile/AnimalAvatar";
 import { CreateRoomForm } from "@/components/rooms/CreateRoomForm";
 import { RoomGrid } from "@/components/rooms/RoomCard";
-import { onlineUsers, publicRooms } from "@/lib/mock-data";
+import { useRooms } from "@/hooks/useRooms";
+import { listPublicRooms } from "@/lib/supabase/rooms";
 
 export default function LobbyPage() {
+  const { onlineUsers, setCurrentRoom } = usePresence();
+  const { rooms, error } = useRooms(listPublicRooms);
+
+  useEffect(() => setCurrentRoom(null), [setCurrentRoom]);
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 md:px-8 md:py-8">
       <PageHeader title="Lobby" subtitle="Hang out here, or pick a room to settle into." action={<CreateRoomForm />} />
@@ -17,7 +27,7 @@ export default function LobbyPage() {
         </h2>
         <ul className="flex flex-wrap gap-4">
           {onlineUsers.map((u) => (
-            <li key={u.id} className="flex flex-col items-center gap-1 text-xs">
+            <li key={u.userId} className="flex flex-col items-center gap-1 text-xs">
               <AnimalAvatar animal={u.animal} />
               <span>{u.username}</span>
             </li>
@@ -38,15 +48,12 @@ export default function LobbyPage() {
               </Link>
             </div>
           </div>
-          <RoomGrid rooms={publicRooms} />
+          <RoomGrid rooms={rooms} error={error} />
         </section>
 
         <ChatPanel
           title="Lobby chat"
-          initialMessages={[
-            { id: "s1", senderId: null, senderName: "system", text: "Welcome to yougostudy 🌿", sentAt: "2026-11-08T09:00:00Z" },
-            { id: "m1", senderId: "u2", senderName: "mori", senderAnimal: "bear", text: "Morning! Library room is open.", sentAt: "2026-11-08T09:01:00Z" },
-          ]}
+          initialMessages={[{ id: "s1", senderId: null, senderName: "system", text: "Welcome to yougostudy 🌿 (chat goes live in the next update)", sentAt: new Date().toISOString() }]}
         />
       </div>
     </div>

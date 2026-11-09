@@ -1,5 +1,6 @@
 // Pure movement math — no Phaser dependency, so it can be reused for
 // remote-player prediction and unit tests.
+import type { Facing } from "@/types";
 
 export interface Vec2 {
   x: number;
@@ -13,7 +14,7 @@ export interface Rect {
   h: number;
 }
 
-export type Direction = "up" | "down" | "left" | "right";
+export type Direction = Facing;
 
 /** Avatar collision footprint around its feet. */
 export const FOOT_SIZE = { w: 26, h: 12 };

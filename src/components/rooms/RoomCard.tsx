@@ -33,7 +33,13 @@ export function RoomCard({ room }: { room: Room }) {
   );
 }
 
-export function RoomGrid({ rooms }: { rooms: Room[] }) {
+export function RoomGrid({ rooms, error }: { rooms: Room[] | null; error?: string | null }) {
+  if (error) {
+    return <p className="rounded-lg border-2 border-dashed border-terracotta/50 p-8 text-center text-sm">Couldn&apos;t load rooms: {error}</p>;
+  }
+  if (rooms === null) {
+    return <p className="p-8 text-center text-sm text-bark/60">Loading rooms…</p>;
+  }
   if (rooms.length === 0) {
     return <p className="rounded-lg border-2 border-dashed border-bark/30 p-8 text-center text-sm">No rooms yet.</p>;
   }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimalAvatar } from "@/components/profile/AnimalAvatar";
-import { currentUser } from "@/lib/mock-data";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const NAV = [
   { href: "/lobby", label: "Lobby" },
@@ -15,6 +15,7 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { profile: currentUser } = useAuth();
 
   return (
     <aside className="flex w-full shrink-0 flex-col border-b-2 border-bark bg-forest text-paper md:h-screen md:w-56 md:border-b-0 md:border-r-2">
